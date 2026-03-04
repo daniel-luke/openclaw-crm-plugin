@@ -1,0 +1,24 @@
+{
+  "id": "openclaw-crm-plugin",
+  "name": "CRM",
+  "description": "Manage personal contacts, track life events, and get birthday/event reminders via a configurable channel.",
+  "version": "0.1.0",
+  "kind": "integration",
+  "skills": ["./skills"],
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "reportingChannel": {
+        "type": "string",
+        "description": "OpenClaw channel ID to send birthday and event reminders to (e.g. 'telegram')"
+      }
+    }
+  },
+  "uiHints": {
+    "reportingChannel": {
+      "label": "Reminder Channel ID",
+      "placeholder": "telegram"
+    }
+  }
+}
