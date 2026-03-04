@@ -1,6 +1,6 @@
 {
   "name": "openclaw-crm-plugin",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Personal CRM for OpenClaw — manage contacts, track life events, and get birthday reminders",
   "openclaw": {
     "extensions": ["./src/index.ts"],

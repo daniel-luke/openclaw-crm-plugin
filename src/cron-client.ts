@@ -1,7 +1,14 @@
+import * as fs from 'node:fs'
+import * as path from 'node:path'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 
 const execFileAsync = promisify(execFile)
+
+interface StoredCronJob {
+  jobId: string
+  name?: string
+}
 
 export interface CronJobOptions {
   name: string
@@ -48,4 +55,33 @@ export async function addCronJob(options: CronJobOptions): Promise<CronJobResult
   }
 
   return { id: trimmed || 'scheduled' }
+}
+
+function readStoredJobs(): StoredCronJob[] {
+  const jobsPath = path.join(process.env.HOME ?? '/root', '.openclaw', 'cron', 'jobs.json')
+  try {
+    return JSON.parse(fs.readFileSync(jobsPath, 'utf-8')) as StoredCronJob[]
+  } catch {
+    return []
+  }
+}
+
+async function removeCronJob(jobId: string): Promise<void> {
+  await execFileAsync('openclaw', ['cron', 'rm', jobId])
+}
+
+/**
+ * Like addCronJob, but first removes any existing job with the same name.
+ * This prevents duplicate reminders when a contact is updated.
+ */
+export async function upsertCronJob(options: CronJobOptions): Promise<CronJobResult> {
+  const existing = readStoredJobs().filter((j) => j.name === options.name)
+  for (const job of existing) {
+    try {
+      await removeCronJob(job.jobId)
+    } catch {
+      // Ignore — job may have already run and been deleted
+    }
+  }
+  return addCronJob(options)
 }

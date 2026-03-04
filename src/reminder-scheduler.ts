@@ -1,6 +1,6 @@
 import type { PersonEntry } from './person-registry.js'
 import type { PersonRegistry } from './person-registry.js'
-import { addCronJob } from './cron-client.js'
+import { upsertCronJob } from './cron-client.js'
 
 export interface ReminderConfig {
   reportingChannel?: string
@@ -45,7 +45,7 @@ export async function schedulePersonReminders(
     const next = nextYearlyOccurrence(monthDay)
     if (next) {
       try {
-        await addCronJob({
+        await upsertCronJob({
           name: `crm-birthday-${person.id}`,
           at: toIso(next),
           message: `Today is ${person.name}'s birthday! Wish them a happy birthday.${channelSuffix}`,
@@ -75,7 +75,7 @@ export async function schedulePersonReminders(
 
     const eventSlug = event.description.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 30)
     try {
-      await addCronJob({
+      await upsertCronJob({
         name: `crm-event-${person.id}-${eventSlug}`,
         at: toIso(targetDate),
         message: `Reminder for ${person.name}: ${event.description}.${channelSuffix}`,

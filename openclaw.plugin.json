@@ -2,7 +2,7 @@
   "id": "openclaw-crm-plugin",
   "name": "CRM",
   "description": "Manage personal contacts, track life events, and get birthday/event reminders via a configurable channel.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "kind": "integration",
   "skills": ["./skills"],
   "configSchema": {
