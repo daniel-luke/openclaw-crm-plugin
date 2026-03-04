@@ -12,7 +12,8 @@ interface StoredCronJob {
 
 export interface CronJobOptions {
   name: string
-  at: string // ISO 8601 datetime, e.g. "2026-06-01T09:00:00"
+  at?: string    // ISO 8601 datetime for one-shot jobs (auto-deletes after run)
+  cron?: string  // cron expression for recurring jobs, e.g. "1 0 * * *"
   message: string
   announceChannel?: string
 }
@@ -26,13 +27,10 @@ export interface CronJobResult {
  * One-shot (--at) jobs auto-delete after success by default.
  */
 export async function addCronJob(options: CronJobOptions): Promise<CronJobResult> {
-  const args = [
-    'cron', 'add',
-    '--name', options.name,
-    '--at', options.at,
-    '--session', 'isolated',
-    '--message', options.message,
-  ]
+  const args = ['cron', 'add', '--name', options.name, '--session', 'isolated', '--message', options.message]
+
+  if (options.at) args.push('--at', options.at)
+  if (options.cron) args.push('--cron', options.cron)
 
   if (options.announceChannel) {
     args.push('--announce', '--channel', options.announceChannel)
@@ -52,7 +50,7 @@ export async function addCronJob(options: CronJobOptions): Promise<CronJobResult
   return { id: trimmed || 'scheduled' }
 }
 
-function readStoredJobs(): StoredCronJob[] {
+export function readStoredJobs(): StoredCronJob[] {
   const jobsPath = path.join(process.env.HOME ?? '/root', '.openclaw', 'cron', 'jobs.json')
   try {
     const data: unknown = JSON.parse(fs.readFileSync(jobsPath, 'utf-8'))

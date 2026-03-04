@@ -1,11 +1,12 @@
 import * as path from 'path'
 import { PersonRegistry } from './person-registry.js'
-import { scheduleAllReminders } from './reminder-scheduler.js'
+import { scheduleDailyCheck } from './reminder-scheduler.js'
 import { makeUpsertPersonTool } from './tools/crm-upsert-person.js'
 import { makeGetPersonTool } from './tools/crm-get-person.js'
 import { makeListPeopleTool } from './tools/crm-list-people.js'
 import { makeDeletePersonTool } from './tools/crm-delete-person.js'
 import { makeGetUpcomingEventsTool } from './tools/crm-get-upcoming-events.js'
+import { makeScheduleTodaysRemindersTool } from './tools/crm-schedule-todays-reminders.js'
 
 interface PluginConfig {
   reportingChannel?: string
@@ -46,12 +47,8 @@ export default function register(api: any): void {
       await state.registry.load()
       api.logger?.info(`[crm-plugin] Loaded ${state.registry.getAllPeople().length} contact(s) from ${state.peopleDir}`)
 
-      // Schedule reminders for all contacts
-      try {
-        await scheduleAllReminders(state.registry, config, api.logger)
-      } catch (err) {
-        api.logger?.warn('[crm-plugin] Failed to schedule reminders:', err)
-      }
+      // Register the daily check cron (00:01 AM) if not already present
+      await scheduleDailyCheck(config, api.logger)
     },
   })
 
@@ -73,14 +70,18 @@ export default function register(api: any): void {
     makeUpsertPersonTool(
       () => state.registry!,
       () => state.peopleDir!,
-      () => state.config!,
-      api.logger,
     ),
   )
   api.registerTool?.(makeGetPersonTool(() => state.registry!))
   api.registerTool?.(makeListPeopleTool(() => state.registry!))
   api.registerTool?.(makeDeletePersonTool(() => state.registry!))
   api.registerTool?.(makeGetUpcomingEventsTool(() => state.registry!))
+  api.registerTool?.(
+    makeScheduleTodaysRemindersTool(
+      () => state.registry!,
+      () => state.config!,
+    ),
+  )
 
   // Register CLI: `openclaw crm list`, `openclaw crm reload`, `openclaw crm schedule-reminders`
   api.registerCli?.({
@@ -120,14 +121,14 @@ export default function register(api: any): void {
       },
       {
         name: 'schedule-reminders',
-        description: 'Re-schedule birthday and event reminders for all contacts',
+        description: 'Re-register the daily reminder check cron (creates it if missing)',
         async handler() {
-          if (!state.registry || !state.config) {
+          if (!state.config) {
             console.error('Plugin not yet started. Try again in a moment.')
             return
           }
-          await scheduleAllReminders(state.registry, state.config, api.logger)
-          console.log('Reminders scheduled.')
+          await scheduleDailyCheck(state.config, api.logger)
+          console.log('Daily reminder check registered.')
         },
       },
     ],

@@ -2,15 +2,10 @@ import * as fs from 'fs'
 import * as path from 'path'
 import type { PersonRegistry, PersonEvent } from '../person-registry.js'
 import { slugify, parsePeopleFile, serializePeopleFile } from '../person-registry.js'
-import type { ReminderConfig } from '../reminder-scheduler.js'
-import { schedulePersonReminders } from '../reminder-scheduler.js'
 
 export function makeUpsertPersonTool(
   getRegistry: () => PersonRegistry,
   getPeopleDir: () => string,
-  getConfig: () => ReminderConfig,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  logger?: any,
 ) {
   return {
     name: 'crm_upsert_person',
@@ -129,10 +124,6 @@ export function makeUpsertPersonTool(
 
       fs.writeFileSync(filePath, serializePeopleFile(entry), 'utf-8')
       await registry.reload()
-
-      // Schedule reminders for this person
-      const config = getConfig()
-      await schedulePersonReminders({ ...entry, filePath }, config, logger)
 
       return {
         success: true,
