@@ -29,6 +29,11 @@ function toIso(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
 }
 
+function errMsg(err: unknown): string {
+  if (err instanceof Error) return err.message
+  return String(err)
+}
+
 export async function schedulePersonReminders(
   person: PersonEntry,
   config: ReminderConfig,
@@ -49,12 +54,11 @@ export async function schedulePersonReminders(
           name: `crm-birthday-${person.id}`,
           at: toIso(next),
           message: `Today is ${person.name}'s birthday! Wish them a happy birthday.${channelSuffix}`,
-          deleteAfterRun: true,
           ...(config.reportingChannel ? { announceChannel: config.reportingChannel } : {}),
         })
         logger?.info(`[crm-plugin] Scheduled birthday reminder for ${person.name} at ${toIso(next)}`)
       } catch (err) {
-        logger?.warn(`[crm-plugin] Failed to schedule birthday reminder for ${person.name}:`, err)
+        logger?.warn(`[crm-plugin] Failed to schedule birthday reminder for ${person.name}: ${errMsg(err)}`)
       }
     }
   }
@@ -79,12 +83,11 @@ export async function schedulePersonReminders(
         name: `crm-event-${person.id}-${eventSlug}`,
         at: toIso(targetDate),
         message: `Reminder for ${person.name}: ${event.description}.${channelSuffix}`,
-        deleteAfterRun: !event.recurring,
         ...(config.reportingChannel ? { announceChannel: config.reportingChannel } : {}),
       })
       logger?.info(`[crm-plugin] Scheduled event reminder for ${person.name}: "${event.description}" at ${toIso(targetDate)}`)
     } catch (err) {
-      logger?.warn(`[crm-plugin] Failed to schedule event reminder for ${person.name}:`, err)
+      logger?.warn(`[crm-plugin] Failed to schedule event reminder for ${person.name} (${event.description}): ${errMsg(err)}`)
     }
   }
 }

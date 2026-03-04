@@ -14,7 +14,6 @@ export interface CronJobOptions {
   name: string
   at: string // ISO 8601 datetime, e.g. "2026-06-01T09:00:00"
   message: string
-  deleteAfterRun?: boolean
   announceChannel?: string
 }
 
@@ -24,7 +23,7 @@ export interface CronJobResult {
 
 /**
  * Adds a one-shot cron job by invoking `openclaw cron add` via the CLI.
- * This works because the plugin runs inside the OpenClaw server environment.
+ * One-shot (--at) jobs auto-delete after success by default.
  */
 export async function addCronJob(options: CronJobOptions): Promise<CronJobResult> {
   const args = [
@@ -34,10 +33,6 @@ export async function addCronJob(options: CronJobOptions): Promise<CronJobResult
     '--session', 'isolated',
     '--message', options.message,
   ]
-
-  if (options.deleteAfterRun) {
-    args.push('--delete-after-run')
-  }
 
   if (options.announceChannel) {
     args.push('--announce', '--channel', options.announceChannel)
@@ -60,14 +55,20 @@ export async function addCronJob(options: CronJobOptions): Promise<CronJobResult
 function readStoredJobs(): StoredCronJob[] {
   const jobsPath = path.join(process.env.HOME ?? '/root', '.openclaw', 'cron', 'jobs.json')
   try {
-    return JSON.parse(fs.readFileSync(jobsPath, 'utf-8')) as StoredCronJob[]
+    const data: unknown = JSON.parse(fs.readFileSync(jobsPath, 'utf-8'))
+    if (Array.isArray(data)) return data as StoredCronJob[]
+    // Handle {"jobs": [...]} envelope format
+    if (data && typeof data === 'object' && 'jobs' in data && Array.isArray((data as Record<string, unknown>).jobs)) {
+      return (data as Record<string, unknown>).jobs as StoredCronJob[]
+    }
+    return []
   } catch {
     return []
   }
 }
 
 async function removeCronJob(jobId: string): Promise<void> {
-  await execFileAsync('openclaw', ['cron', 'rm', jobId])
+  await execFileAsync('openclaw', ['cron', 'remove', jobId])
 }
 
 /**
